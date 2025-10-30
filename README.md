@@ -3,24 +3,7 @@ Classic Snake game made using Raylib 5.5 made for Linux
 Following the tutorial provided by [educ8s](https://github.com/educ8s) this project aim to build
 on what was created. Features and style changes will be made in the future to make it my own.
 
-> Build with Raylib 5.5 and C++, this project demonstrates my skills
-
-# Folder Structure
-RaySnake/
-├── res/
-│   └── eat.mp3
-│   └── wall.mp3
-│   └── food.png
-├── src/
-│   └── main.cpp
-├── include/
-│   └── raylib.h
-├── lib/
-│   └── libraylib.a
-├── build/
-│   └── snake
-├── README.md
-└── Makefile
+> Developed with Raylib 5.5 and C++, this project aims to demonstrates my skills in software/game development
 
 # Prerequisites
 - Raylib 5.5
