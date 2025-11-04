@@ -5,15 +5,18 @@
 
 using namespace std;
 
-// TODO: https://www.youtube.com/watch?v=LGqsnM_WEK4&list=PLwR6ZGPvjVOSRywn9VCQ3yrRVruxzzuo9&index=2
-// on 28:40 mins
-
 Color green = { 173, 204, 96, 255 };
 Color darkGreen = { 43, 51, 24, 255 };
 
 int cellSize = 30;
 int cellCount = 25;
 int offset = 75;
+int width_height = 2 * offset + cellSize * cellCount;
+int centerXY = width_height / 2;
+int doubleCellSize = cellSize * 2;
+int textPosX = centerXY - doubleCellSize;
+int textPlayY = centerXY - doubleCellSize;
+int textExitY = centerXY + doubleCellSize;
 
 double lastUpdateTime = 0;
 bool eventTriggered( double interval )
@@ -77,7 +80,6 @@ public:
         }
         return position;
     }
-
 };
 
 class Snake {
@@ -117,14 +119,22 @@ public:
     }
 };
 
+enum State { MENU, PLAY, PAUSE };
+
 class Game {
 public:
     Snake snake = Snake();
     Food food = Food(snake.body);
     bool running = true;
+    bool is_running = true;
     int score = 0;
     Sound eatSound;
     Sound wallSound;
+    State currentState = MENU;
+    Rectangle gameCursor = {
+        (float)textPosX - doubleCellSize + 15,
+        (float)textPlayY, (float)cellSize, (float)cellSize
+    };
 
     Game()
     {
@@ -141,7 +151,7 @@ public:
 
     void Update()
     {
-        if( running )
+        if( running && currentState == PLAY )
         {
             snake.Update();
             CheckCollisionWithFood();
@@ -186,6 +196,7 @@ public:
         running = false;
         score = 0;
         PlaySound(wallSound);
+        currentState = MENU;
     }
 
     void CheckCollisionWithTail()
@@ -198,6 +209,107 @@ public:
         }
     }
 
+    void MainMenu()
+    {
+        // update
+        if( eventTriggered( 0.2 ) )
+        {
+            Update();
+        }
+        // input
+        if( IsKeyPressed( KEY_ESCAPE ) ) is_running = false;
+
+        if( IsKeyPressed( KEY_UP ) && gameCursor.y == textExitY )
+        {
+            gameCursor.y = centerXY - doubleCellSize;
+        }
+        if( IsKeyPressed( KEY_DOWN ) && gameCursor.y == textPlayY )
+        {
+            gameCursor.y = centerXY + doubleCellSize;
+        }
+        if( IsKeyPressed( KEY_ENTER ) && gameCursor.y == textPlayY )
+        {
+            // change state
+            currentState = PLAY;
+        }
+        if( IsKeyPressed( KEY_ENTER ) && gameCursor.y == textExitY )
+        {
+            // quit game
+            is_running = false;
+        }
+        // draw
+        DrawText( "PLAY", textPosX, textPlayY, 40, darkGreen );
+        DrawText( "EXIT", textPosX, textExitY, 40, darkGreen );
+        DrawRectangleRounded(gameCursor, 0.5, 6, darkGreen);
+    }
+
+    void Playing()
+    {
+        if( eventTriggered( 0.2 ) )
+        {
+            Update();
+        }
+
+        if( IsKeyPressed( KEY_ESCAPE ) ) is_running = false;
+        if( IsKeyPressed( KEY_P ) )
+        {
+            currentState = PAUSE;
+            running = !running;
+        }
+
+        if( IsKeyPressed( KEY_UP ) && snake.direction.y != 1 )
+        {
+            snake.direction = { 0, -1 };
+            running = true;
+        }
+        if( IsKeyPressed( KEY_DOWN ) && snake.direction.y != -1 )
+        {
+            snake.direction = { 0, 1 };
+            running = true;
+        }
+        if( IsKeyPressed( KEY_LEFT ) && snake.direction.x != 1 )
+        {
+            snake.direction = { -1, 0 };
+            running = true;
+        }
+        if( IsKeyPressed( KEY_RIGHT ) && snake.direction.x != -1 )
+        {
+            snake.direction = { 1, 0 };
+            running = true;
+        }
+
+        Draw();
+    }
+
+    void Pause()
+    {
+        if( IsKeyPressed( KEY_ESCAPE ) ) is_running = false;
+
+        if( IsKeyPressed( KEY_UP ) && gameCursor.y == textExitY )
+        {
+            gameCursor.y = centerXY - doubleCellSize;
+        }
+        if( IsKeyPressed( KEY_DOWN ) && gameCursor.y == textPlayY )
+        {
+            gameCursor.y = centerXY + doubleCellSize;
+        }
+        if( IsKeyPressed( KEY_ENTER ) && gameCursor.y == textPlayY )
+        {
+            // change state
+            currentState = PLAY;
+            running = true;
+        }
+        if( IsKeyPressed( KEY_ENTER ) && gameCursor.y == textExitY )
+        {
+            // quit game
+            is_running = false;
+        }
+
+        DrawText( "CONTINUE", textPosX, textPlayY, 40, darkGreen );
+        DrawText( "EXIT", textPosX, textExitY, 40, darkGreen );
+        DrawRectangleRounded(gameCursor, 0.5, 6, darkGreen);
+    }
+
 };
 
 int main( void ) {
@@ -206,39 +318,26 @@ int main( void ) {
   SetTargetFPS(60);
 
   printf("Starting game...\n");
-  InitWindow(2 * offset + cellSize * cellCount, 2 * offset + cellSize * cellCount, "Retro Snake");
+  InitWindow(width_height, width_height, "Retro Snake");
 
   {
       Game game = Game();
 
-      while( !WindowShouldClose() )
+      while( game.is_running )
       {
           BeginDrawing();
-
-          if( eventTriggered( 0.2 ) )
+          switch( game.currentState )
           {
-              game.Update();
-          }
-
-          if( IsKeyPressed( KEY_UP ) && game.snake.direction.y != 1 )
-          {
-              game.snake.direction = { 0, -1 };
-              game.running = true;
-          }
-          if( IsKeyPressed( KEY_DOWN ) && game.snake.direction.y != -1 )
-          {
-              game.snake.direction = { 0, 1 };
-              game.running = true;
-          }
-          if( IsKeyPressed( KEY_LEFT ) && game.snake.direction.x != 1 )
-          {
-              game.snake.direction = { -1, 0 };
-              game.running = true;
-          }
-          if( IsKeyPressed( KEY_RIGHT ) && game.snake.direction.x != -1 )
-          {
-              game.snake.direction = { 1, 0 };
-              game.running = true;
+              case MENU:
+                  game.MainMenu();
+                  break;
+              case PLAY:
+                  game.Playing();
+                  break;
+              case PAUSE:
+                  game.Pause();
+                  break;
+              default: break;
           }
 
           // drawing
@@ -248,8 +347,22 @@ int main( void ) {
           DrawText( "Retro Snake", offset - 5, 20, 40, darkGreen );
           DrawText( TextFormat("%i", game.score), offset - 5, offset + cellSize * cellCount + 10, 40, darkGreen );
 
-          game.Draw();
+          DrawText( "UP/DOWN/LEFT/RIGHT - Move Snake/Cursor",
+            offset + doubleCellSize,
+            offset + cellSize * cellCount + 10,
+            20, darkGreen
+          );
+          DrawText( "ENTER - Select",
+            offset + doubleCellSize,
+            offset + cellSize * cellCount + 30,
+            20, darkGreen
+          );
 
+          DrawText( "P - Pause",
+            offset + ( doubleCellSize * 5 ),
+            offset + cellSize * cellCount + 30,
+            20, darkGreen
+          );
 
           EndDrawing();
       }
