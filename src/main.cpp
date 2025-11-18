@@ -1,7 +1,9 @@
-#include <cstdio>
+#include <iostream>
 #include <deque>
 #include "raylib.h"
 #include "raymath.h"
+
+// TODO: make a timer for the powerups
 
 using namespace std;
 
@@ -42,36 +44,43 @@ bool ElementInDeque(Vector2 element, deque<Vector2> deque)
     return false;
 }
 
-class Food {
+enum PowerState { Hidden, Visible, Active };
+enum State { MENU, PLAY, PAUSE };
+
+class Obj {
 public:
     Vector2 position;
     Texture2D texture;
+    PowerState state;
 
-    Food(deque<Vector2> snakeBody)
+    Obj( const std::string& img, deque<Vector2> snakeBody )
     {
-        Image image = LoadImage("res/food.png");
+        std::string img_path = "res/";
+        std::string img_full = img_path + img;
+        Image image = LoadImage( img_full.c_str() );
         texture = LoadTextureFromImage( image );
         UnloadImage( image );
         position = GenerateRandomPos(snakeBody);
     }
-    ~Food()
+    virtual ~Obj()
     {
-        UnloadTexture(texture);
+        if( texture.id != 0 ) UnloadTexture(texture);
+        std::cout << "[ OBJ ] textured unloaded" << std::endl;
     }
 
-    void Draw()
+    void Draw() const
     {
         DrawTexture( texture, offset + position.x * cellSize, offset + position.y * cellSize, WHITE );
     }
 
-    Vector2 GenerateRandomCell()
+    Vector2 GenerateRandomCell() const
     {
         float x = GetRandomValue(0, cellCount - 1);
         float y = GetRandomValue(0, cellCount - 1);
         return Vector2{x,y};
     }
 
-    Vector2 GenerateRandomPos( deque<Vector2> snakeBody)
+    Vector2 GenerateRandomPos( deque<Vector2> snakeBody ) const
     {
         Vector2 position = GenerateRandomCell();
         while( ElementInDeque( position, snakeBody))
@@ -80,6 +89,102 @@ public:
         }
         return position;
     }
+};
+
+class Food : public Obj {
+public:
+    Food( const std::string& img, deque<Vector2> snakeBody)
+        : Obj( img, snakeBody )
+    { }
+};
+
+class DoublePts : public Obj {
+public:
+    double stateStartTime = 0;
+
+    DoublePts( const std::string& img, deque<Vector2> snakeBody )
+        : Obj( img, snakeBody )
+    {
+        float xy = cellCount * -2;
+        position = { xy, xy };
+        state = PowerState::Hidden;
+    }
+
+    void Update( deque<Vector2> snakeBody )
+    {
+        double currentTime = GetTime();
+        switch( state )
+        {
+            case PowerState::Hidden:
+                if( currentTime - stateStartTime >= 30.0 )
+                {
+                    state = PowerState::Visible;
+                    position = GenerateRandomPos( snakeBody );
+                    stateStartTime = currentTime;
+                    std::cout << "[ DOUBLE PTS ] spawned" << std::endl;
+                }
+                break;
+            case PowerState::Visible:
+                if( Vector2Equals( snakeBody[ 0 ], position ) )
+                {
+                    state = PowerState::Active;
+                    stateStartTime = currentTime;
+                    position = { -2 * (float)cellCount, -2 * (float)cellCount };
+                    std::cout << "[ DOUBLE PTS ] collected" << std::endl;
+                }
+                else if( currentTime - stateStartTime >= 30.0 )
+                {
+                    state = PowerState::Hidden;
+                    stateStartTime = currentTime;
+                    position = { -2 * (float)cellCount, -2 * (float)cellCount };
+                    std::cout << "[ DOUBLE PTS ] despawned" << std::endl;
+                }
+                break;
+            case PowerState::Active:
+                if( currentTime - stateStartTime >= 20.0 )
+                {
+                    state = PowerState::Hidden;
+                    stateStartTime = currentTime;
+                    std::cout << "[ DOUBLE PTS ] expired" << std::endl;
+                }
+                break;
+            default: break;
+        }
+        /*
+        if( active )
+        {
+            if( isActive( 20.0 ) )
+            {
+                active = false;
+                countVisible = GetTime();
+            }
+        }
+        else {
+            if( isVisible( 30.0 ) )
+            {
+                visible = !visible;
+                if( visible ) 
+                {
+                    position = GenerateRandomPos( snakeBody );
+                    std::cout << "spawned" << std::endl;
+                }
+                else {
+                    float xy = cellCount * -2;
+                    position = { xy, xy };
+                    std::cout << "despawned" << std::endl;
+                }
+            }
+        }
+        */
+    }
+
+    void Reset()
+    {
+        state = PowerState::Hidden;
+        stateStartTime = GetTime();
+        position = { -2 * (float)cellCount, -2 * (float)cellCount };
+    }
+
 };
 
 class Snake {
@@ -119,14 +224,16 @@ public:
     }
 };
 
-enum State { MENU, PLAY, PAUSE };
 
 class Game {
 public:
     Snake snake = Snake();
-    Food food = Food(snake.body);
-    bool running = true;
-    bool is_running = true;
+
+    Food food = Food( "food.png", snake.body );
+    DoublePts doublePts = DoublePts( "doublePts.png", snake.body );
+
+    bool running = false; // game's logic
+    bool is_running = true; // program's logic (do better with this)
     int score = 0;
     Sound eatSound;
     Sound wallSound;
@@ -141,6 +248,7 @@ public:
         InitAudioDevice();
         eatSound = LoadSound("res/eat.mp3");
         wallSound = LoadSound("res/wall.mp3");
+        SetMasterVolume( 0.0f ); // 0.0f = silent, 1.0f = full volume
     }
     ~Game()
     {
@@ -153,6 +261,7 @@ public:
     {
         if( running && currentState == PLAY )
         {
+            doublePts.Update( snake.body );
             snake.Update();
             CheckCollisionWithFood();
             CheckCollisionWithEdges();
@@ -162,6 +271,7 @@ public:
 
     void Draw()
     {
+        doublePts.Draw();
         food.Draw();
         snake.Draw();
     }
@@ -172,7 +282,8 @@ public:
         {
             food.position = food.GenerateRandomPos(snake.body);
             snake.addSegment = true;
-            score++;
+            if( doublePts.state == PowerState::Active ) score += 2;
+            else score++;
             PlaySound(eatSound);
         }
     }
@@ -192,6 +303,7 @@ public:
     void GameOver()
     {
         snake.Reset();
+        doublePts.Reset();
         food.position = food.GenerateRandomPos( snake.body );
         running = false;
         score = 0;
@@ -346,6 +458,20 @@ int main( void ) {
 
           DrawText( "Retro Snake", offset - 5, 20, 40, darkGreen );
           DrawText( TextFormat("%i", game.score), offset - 5, offset + cellSize * cellCount + 10, 40, darkGreen );
+          
+          if( game.running )
+          {
+            DrawText(
+                TextFormat(
+                    "Double Points: %s",
+                    game.doublePts.state == PowerState::Active ? "Active" : "Deactive"
+                ),
+                cellSize * 15,
+                cellSize + 15,
+                20,
+                darkGreen
+            );
+          }
 
           DrawText( "UP/DOWN/LEFT/RIGHT - Move Snake/Cursor",
             offset + doubleCellSize,

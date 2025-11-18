@@ -5,6 +5,10 @@ on what was created. Features and style changes will be made in the future to ma
 
 > Developed with Raylib 5.5 and C++, this project aims to demonstrates my skills in software/game development
 
+> [!IMPORTANT] WORK IN PROGRESS - DO NOT USE
+> This branch (wip/powerups) is under active development.
+> For the stable version, see the [`main` branch](https://github.com/gigglyhank/snake/tree/main)
+
 # Prerequisites
 - Raylib 5.5
 - C++ compiler (GCC, Clang, MSVC)
