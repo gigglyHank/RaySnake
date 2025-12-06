@@ -248,7 +248,7 @@ public:
         InitAudioDevice();
         eatSound = LoadSound("res/eat.mp3");
         wallSound = LoadSound("res/wall.mp3");
-        SetMasterVolume( 0.0f ); // 0.0f = silent, 1.0f = full volume
+        // SetMasterVolume( 0.0f ); // 0.0f = silent, 1.0f = full volume
     }
     ~Game()
     {

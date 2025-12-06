@@ -5,13 +5,12 @@ on what was created. Features and style changes will be made in the future to ma
 
 > Developed with Raylib 5.5 and C++, this project aims to demonstrates my skills in software/game development
 
-> [!IMPORTANT] WORK IN PROGRESS - DO NOT USE
-> This branch (wip/powerups) is under active development.
-> For the stable version, see the [`main` branch](https://github.com/gigglyhank/snake/tree/main)
-
 # Prerequisites
 - Raylib 5.5
-- C++ compiler (GCC, Clang, MSVC)
+- C++ compiler (GCC)
+> [!NOTE]
+> this project uses GCC. If you'd like to use Clang or MSVC please edit line 2 of the Makefile:
+> `CC := <your C++ compiler>`
 - Make
 
 > [!NOTE]
@@ -23,12 +22,9 @@ on what was created. Features and style changes will be made in the future to ma
 | ------------- | -------------- |
 | make | executes the `compile_run` command |
 | compile_run | builds and runs the application |
-| clean_build | removes the application |
-| clean_debug | removes the debug version of the application |
 | run | runs the application found in the `build` folder |
 | compile | only compiles the `main.cpp` file found in `src` folder |
-| debug | builds a debug version of the application |
-| clean | executes `clean_build` and `clean_debug` commands then checks/removes object file found in `objs` |
+| clean | executes `clean_build` commands then checks/removes object file found in `objs` |
 | all | executes `clean`, `compile` and `run` |
 | all_no_run | executes `clean` and `compile` |
 
